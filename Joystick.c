@@ -113,12 +113,14 @@ void parseLine(char *line) {
 #define MAX_BUFFER 32
 char b[MAX_BUFFER];
 uint8_t l = 0;
+//监听ttl RX的输入
 ISR(USART1_RX_vect) {
 	char c = fgetc(stdin);
 	if (Serial_IsSendReady()) {
 		printf("%c", c);
 	}
 	if (c == '\r') {
+		//判断RX输入的是什么内容
 		parseLine(b);
 		l = 0;
 		memset(b, 0, sizeof(b));
@@ -129,6 +131,7 @@ ISR(USART1_RX_vect) {
 
 // Main entry point.
 int main(void) {
+	//初始化com端口
   Serial_Init(9600, false);
   Serial_CreateStream(NULL);
 
@@ -136,15 +139,20 @@ int main(void) {
   UCSR1B |= (1 << RXCIE1);
 
 	// We'll start by performing hardware and peripheral setup.
+	//初始化硬件
 	SetupHardware();
 	// We'll then enable global interrupts for our use.
+	//中断
 	GlobalInterruptEnable();
 	// Once that's done, we'll enter an infinite loop.
+	//进入一个死循环
 	for (;;)
 	{
 		// We need to run our task to process and deliver data for our IN and OUT endpoints.
+		//处理硬件的输入输出
 		HID_Task();
 		// We also need to run the main USB management task.
+		//usb任务管理
 		USB_USBTask();
 	}
 }
@@ -152,14 +160,17 @@ int main(void) {
 // Configures hardware and peripherals, such as the USB peripherals.
 void SetupHardware(void) {
 	// We need to disable watchdog if enabled by bootloader/fuses.
+	//禁用看门狗
 	MCUSR &= ~(1 << WDRF);
 	wdt_disable();
 
 	// We need to disable clock division before initializing the USB hardware.
+	//禁用时钟
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
 
 	// The USB stack should be initialized last.
+	//usb初始化
 	USB_Init();
 }
 
@@ -185,6 +196,7 @@ void EVENT_USB_Device_ConfigurationChanged(void) {
 }
 
 // Process control requests sent to the device from the USB host.
+//usb发送控制请求
 void EVENT_USB_Device_ControlRequest(void) {
 	// We can handle two control requests: a GetReport and a SetReport.
 	switch (USB_ControlRequest.bRequest)
@@ -226,40 +238,52 @@ void EVENT_USB_Device_ControlRequest(void) {
 // Process and deliver data from IN and OUT endpoints.
 void HID_Task(void) {
 	// If the device isn't connected and properly configured, we can't do anything here.
+	//判断有usb有没有连接
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 	  return;
 
 	// We'll start with the OUT endpoint.
+	//检查JOYSTICK 的输出端 [即switch向芯片发数据]
 	Endpoint_SelectEndpoint(JOYSTICK_OUT_EPADDR);
 	// We'll check to see if we received something on the OUT endpoint.
+	//确定是否收到数据
 	if (Endpoint_IsOUTReceived())
 	{
 		// If we did, and the packet has data, we'll react to it.
+		//判断一下是否能读取到数据
 		if (Endpoint_IsReadWriteAllowed())
 		{
 			// We'll create a place to store our data received from the host.
+			//新那家一个 JoystickOutputData 来用存放收到的数据对象
 			USB_JoystickReport_Output_t JoystickOutputData;
 			// We'll then take in that data, setting it up in our storage.
+			//把数据写入到对象
 			Endpoint_Read_Stream_LE(&JoystickOutputData, sizeof(JoystickOutputData), NULL);
 			// At this point, we can react to this data.
 			// However, since we're not doing anything with this data, we abandon it.
+			//还可以对数据做其它操作
 		}
 		// Regardless of whether we reacted to the data, we acknowledge an OUT packet on this endpoint.
+		//清除OUT数据
 		Endpoint_ClearOUT();
 	}
 
 	// We'll then move on to the IN endpoint.
+	//检查JOYSTICK 的输入端 [即芯片向switch发数据]
 	Endpoint_SelectEndpoint(JOYSTICK_IN_EPADDR);
 	// We first check to see if the host is ready to accept data.
+	//确定是否有数据输入
 	if (Endpoint_IsINReady())
 	{
 		// We'll create an empty report.
 		USB_JoystickReport_Input_t JoystickInputData;
 		// We'll then populate this report with what we want to send to the host.
+		//获取要要输入的数据
 		GetNextReport(&JoystickInputData);
 		// Once populated, we can output this data to the host. We do this by first writing the data to the control stream.
 		Endpoint_Write_Stream_LE(&JoystickInputData, sizeof(JoystickInputData), NULL);
 		// We then send an IN packet on this endpoint.
+		//清除输入点
 		Endpoint_ClearIN();
 
 		/* Clear the report data afterwards */
