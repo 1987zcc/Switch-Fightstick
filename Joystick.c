@@ -206,7 +206,6 @@ ISR(USART1_RX_vect)
 	else if (c != '\n' && l < MAX_BUFFER)
 	{
 		b[l++] = c;
-		
 	}
 }
 
@@ -219,9 +218,8 @@ int main(void)
 
 	sei();
 	//等待com信号
-	while(Serial_IsCharReceived()==false)
+	while (Serial_IsCharReceived() == false)
 	{
-
 	}
 	// char c = fgetc(stdin);
 	// Serial_SendString("111");
@@ -264,20 +262,16 @@ void SetupHardware(void)
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
 
-	#ifdef ALERT_WHEN_DONE
-	// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
-	#warning LED and Buzzer functionality enabled. All pins on both PORTB and \
+#ifdef ALERT_WHEN_DONE
+// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
+#warning LED and Buzzer functionality enabled. All pins on both PORTB and \
 PORTD will toggle when printing is done.
-	DDRD  = 0xFF; //Teensy uses PORTD
-	PORTD =  0x0;
-                  //We'll just flash all pins on both ports since the UNO R3
-	DDRB  = 0xFF; //uses PORTB. Micro can use either or, but both give us 2 LEDs
-	PORTB =  0x0; //The ATmega328P on the UNO will be resetting, so unplug it?
-	#endif
-
-
-	PORTD = 0x8; //d8高电瓶
-
+	DDRD = 0xFF; //Teensy uses PORTD
+	PORTD = 0x0;
+	//We'll just flash all pins on both ports since the UNO R3
+	DDRB = 0xFF; //uses PORTB. Micro can use either or, but both give us 2 LEDs
+	PORTB = 0x0; //The ATmega328P on the UNO will be resetting, so unplug it?
+#endif
 
 	// The USB stack should be initialized last.
 	//usb初始化
