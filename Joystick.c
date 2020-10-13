@@ -38,10 +38,12 @@ void parseLine(char *line)
 	if (strcasecmp(t, "Button") == 0)
 	{
 		target = Button;
+		printf("\r\nButton OK\r\n");
 	}
 	else if (strcasecmp(t, "LX") == 0)
 	{
 		target = LX;
+		printf("\r\nLX OK\r\n");
 	}
 	else if (strcasecmp(t, "LY") == 0)
 	{
@@ -62,7 +64,9 @@ void parseLine(char *line)
 	else
 	{
 		target = RELEASE;
+		printf("\r\nRELEASE OK\r\n");
 	}
+
 	if (strcasecmp(c, "Y") == 0)
 	{
 		command = SWITCH_Y;
@@ -197,12 +201,12 @@ ISR(USART1_RX_vect)
 		parseLine(b);
 		l = 0;
 		memset(b, 0, sizeof(b));
+		// printf("\r\nOK\r\n");
 	}
 	else if (c != '\n' && l < MAX_BUFFER)
 	{
 		b[l++] = c;
-		//发送一个消息
-    	Serial_TxString("Test String\r\n");
+		
 	}
 }
 
@@ -214,8 +218,17 @@ int main(void)
 	Serial_CreateStream(NULL);
 
 	sei();
+	//等待com信号
+	while(Serial_IsCharReceived()==false)
+	{
 
-	
+	}
+	// char c = fgetc(stdin);
+	// Serial_SendString("111");
+	// Serial_SendString(c);
+	// Serial_SendString("\r\n");
+	Serial_SendString("Welcome switch joystick!\r\n");
+	// printf("Welcome switch joystick!\r\n");
 
 	UCSR1B |= (1 << RXCIE1);
 
@@ -250,6 +263,21 @@ void SetupHardware(void)
 	//禁用时钟
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
+
+	#ifdef ALERT_WHEN_DONE
+	// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
+	#warning LED and Buzzer functionality enabled. All pins on both PORTB and \
+PORTD will toggle when printing is done.
+	DDRD  = 0xFF; //Teensy uses PORTD
+	PORTD =  0x0;
+                  //We'll just flash all pins on both ports since the UNO R3
+	DDRB  = 0xFF; //uses PORTB. Micro can use either or, but both give us 2 LEDs
+	PORTB =  0x0; //The ATmega328P on the UNO will be resetting, so unplug it?
+	#endif
+
+
+	PORTD |= (1<< PD3);
+
 
 	// The USB stack should be initialized last.
 	//usb初始化
