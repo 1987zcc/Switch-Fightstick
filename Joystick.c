@@ -276,7 +276,7 @@ PORTD will toggle when printing is done.
 	#endif
 
 
-	PORTD |= (1<< PD3);
+	PORTD = 0x8; //d8高电瓶
 
 
 	// The USB stack should be initialized last.
