@@ -220,6 +220,7 @@ int main(void)
 	//等待com信号
 	while (Serial_IsCharReceived() == false)
 	{
+		_delay_ms(1000); //延迟1秒
 	}
 	// char c = fgetc(stdin);
 	// Serial_SendString("111");
@@ -264,13 +265,12 @@ void SetupHardware(void)
 
 #ifdef ALERT_WHEN_DONE
 // Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
-#warning LED and Buzzer functionality enabled. All pins on both PORTB and \
-PORTD will toggle when printing is done.
+#warning LED and Buzzer functionality enabled. All pins on both PORTB and PORTD will toggle when printing is done.
 	DDRD = 0xFF; //Teensy uses PORTD
-	PORTD = 0x0;
+	PORTD = 0x00;
 	//We'll just flash all pins on both ports since the UNO R3
 	DDRB = 0xFF; //uses PORTB. Micro can use either or, but both give us 2 LEDs
-	PORTB = 0x0; //The ATmega328P on the UNO will be resetting, so unplug it?
+	PORTB = 0x00; //The ATmega328P on the UNO will be resetting, so unplug it?
 #endif
 
 	// The USB stack should be initialized last.
@@ -403,6 +403,7 @@ void HID_Task(void)
 // Prepare the next report for the host.
 void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
 {
+
 	/* Clear the report contents */
 	memset(ReportData, 0, sizeof(USB_JoystickReport_Input_t));
 	ReportData->LX = STICK_CENTER;
