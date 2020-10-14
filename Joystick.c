@@ -400,6 +400,7 @@ void HID_Task(void)
 	}
 }
 
+int portsval = 0;
 // Prepare the next report for the host.
 void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
 {
@@ -416,6 +417,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
 	switch (target)
 	{
 	case Button:
+
 		ReportData->Button |= command;
 		break;
 	case LX:
@@ -441,6 +443,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
 		ReportData->RY = STICK_CENTER;
 		ReportData->HAT = HAT_CENTER;
 		ReportData->Button |= SWITCH_RELEASE;
+
 		break;
 	}
 }
