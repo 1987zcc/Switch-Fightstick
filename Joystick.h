@@ -63,13 +63,13 @@ typedef enum
 	SWITCH_R = 0x20,
 	SWITCH_ZL = 0x40,
 	SWITCH_ZR = 0x80,
-	SWITCH_SELECT = 0x100,
-	SWITCH_START = 0x200,
+	SWITCH_MINUS = 0x100,
+	SWITCH_PLUS = 0x200,
 	SWITCH_LCLICK = 0x400,
 	SWITCH_RCLICK = 0x800,
 	SWITCH_HOME = 0x1000,
 	SWITCH_CAPTURE = 0x2000,
-	SWITCH_RELEASE = 0x00,
+	SWITCH_RELEASE = 0x0000,
 } JoystickButtons_t;
 
 #define HAT_TOP 0x00
@@ -131,6 +131,8 @@ void EVENT_USB_Device_Connect(void);
 void EVENT_USB_Device_Disconnect(void);
 void EVENT_USB_Device_ConfigurationChanged(void);
 void EVENT_USB_Device_ControlRequest(void);
+// Prepare Empty report
+void EmptyReport(void);
 // Prepare the next report for the host.
 void GetNextReport(USB_JoystickReport_Input_t *const ReportData);
 

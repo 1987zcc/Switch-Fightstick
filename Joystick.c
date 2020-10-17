@@ -29,6 +29,7 @@ these buttons for our use.
 
 uint8_t target = RELEASE;
 uint16_t command;
+USB_JoystickReport_Input_t last_report;
 
 void parseLine(char *line)
 {
@@ -38,12 +39,10 @@ void parseLine(char *line)
 	if (strcasecmp(t, "Button") == 0)
 	{
 		target = Button;
-		printf("\r\nButton OK\r\n");
 	}
 	else if (strcasecmp(t, "LX") == 0)
 	{
 		target = LX;
-		printf("\r\nLX OK\r\n");
 	}
 	else if (strcasecmp(t, "LY") == 0)
 	{
@@ -64,9 +63,7 @@ void parseLine(char *line)
 	else
 	{
 		target = RELEASE;
-		printf("\r\nRELEASE OK\r\n");
 	}
-
 	if (strcasecmp(c, "Y") == 0)
 	{
 		command = SWITCH_Y;
@@ -99,13 +96,13 @@ void parseLine(char *line)
 	{
 		command = SWITCH_ZR;
 	}
-	else if (strcasecmp(c, "SELECT") == 0)
+	else if (strcasecmp(c, "MINUS") == 0)
 	{
-		command = SWITCH_SELECT;
+		command = SWITCH_MINUS;
 	}
-	else if (strcasecmp(c, "START") == 0)
+	else if (strcasecmp(c, "PLUS") == 0)
 	{
-		command = SWITCH_START;
+		command = SWITCH_PLUS;
 	}
 	else if (strcasecmp(c, "LCLICK") == 0)
 	{
@@ -122,10 +119,6 @@ void parseLine(char *line)
 	else if (strcasecmp(c, "CAPTURE") == 0)
 	{
 		command = SWITCH_CAPTURE;
-	}
-	else if (strcasecmp(c, "RELEASE") == 0)
-	{
-		command = SWITCH_RELEASE;
 	}
 	else if (strcasecmp(c, "MIN") == 0)
 	{
@@ -182,6 +175,34 @@ void parseLine(char *line)
 	{
 		target = RELEASE;
 	}
+
+	switch (target)
+	{
+	// Allow single button release
+	case Button:
+		last_report.Button ^= command;
+		break;
+	// Overwrite conflict input
+	case LX:
+		last_report.LX = command;
+		break;
+	case LY:
+		last_report.LY = command;
+		break;
+	case RX:
+		last_report.RX = command;
+		break;
+	case RY:
+		last_report.RY = command;
+		break;
+	case HAT:
+		last_report.HAT = command;
+		break;
+	case RELEASE:
+	default:
+		EmptyReport();
+		break;
+	}
 }
 
 #define MAX_BUFFER 32
@@ -201,7 +222,6 @@ ISR(USART1_RX_vect)
 		parseLine(b);
 		l = 0;
 		memset(b, 0, sizeof(b));
-		// printf("\r\nOK\r\n");
 	}
 	else if (c != '\n' && l < MAX_BUFFER)
 	{
@@ -212,69 +232,49 @@ ISR(USART1_RX_vect)
 // Main entry point.
 int main(void)
 {
-	//初始化com端口
 	Serial_Init(9600, false);
 	Serial_CreateStream(NULL);
-
 	sei();
-	//等待com信号
-	while (Serial_IsCharReceived() == false)
-	{
-		_delay_ms(1000); //延迟1秒
-	}
-	// char c = fgetc(stdin);
-	// Serial_SendString("111");
-	// Serial_SendString(c);
-	// Serial_SendString("\r\n");
-	Serial_SendString("Welcome switch joystick!\r\n");
-	// printf("Welcome switch joystick!\r\n");
-
 	UCSR1B |= (1 << RXCIE1);
 
+	EmptyReport();
 	// We'll start by performing hardware and peripheral setup.
-	//初始化硬件
 	SetupHardware();
 	// We'll then enable global interrupts for our use.
-	//中断
 	GlobalInterruptEnable();
 	// Once that's done, we'll enter an infinite loop.
-	//进入一个死循环
 	for (;;)
 	{
 		// We need to run our task to process and deliver data for our IN and OUT endpoints.
-		//处理硬件的输入输出
 		HID_Task();
 		// We also need to run the main USB management task.
-		//usb任务管理
 		USB_USBTask();
 	}
+}
+
+//清空按钮状态
+void EmptyReport(void)
+{
+	last_report.Button = SWITCH_RELEASE;
+	last_report.LX = STICK_CENTER;
+	last_report.LY = STICK_CENTER;
+	last_report.RX = STICK_CENTER;
+	last_report.RY = STICK_CENTER;
+	last_report.HAT = HAT_CENTER;
 }
 
 // Configures hardware and peripherals, such as the USB peripherals.
 void SetupHardware(void)
 {
 	// We need to disable watchdog if enabled by bootloader/fuses.
-	//禁用看门狗
 	MCUSR &= ~(1 << WDRF);
 	wdt_disable();
 
 	// We need to disable clock division before initializing the USB hardware.
-	//禁用时钟
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
 
-#ifdef ALERT_WHEN_DONE
-// Both PORTD and PORTB will be used for the optional LED flashing and buzzer.
-#warning LED and Buzzer functionality enabled. All pins on both PORTB and PORTD will toggle when printing is done.
-	DDRD = 0xFF; //Teensy uses PORTD
-	PORTD = 0x00;
-	//We'll just flash all pins on both ports since the UNO R3
-	DDRB = 0xFF; //uses PORTB. Micro can use either or, but both give us 2 LEDs
-	PORTB = 0x00; //The ATmega328P on the UNO will be resetting, so unplug it?
-#endif
-
 	// The USB stack should be initialized last.
-	//usb初始化
 	USB_Init();
 }
 
@@ -303,7 +303,6 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 }
 
 // Process control requests sent to the device from the USB host.
-//usb发送控制请求
 void EVENT_USB_Device_ControlRequest(void)
 {
 	// We can handle two control requests: a GetReport and a SetReport.
@@ -355,7 +354,6 @@ void HID_Task(void)
 	//检查JOYSTICK 的输出端 [即switch向芯片发数据]
 	Endpoint_SelectEndpoint(JOYSTICK_OUT_EPADDR);
 	// We'll check to see if we received something on the OUT endpoint.
-	//确定是否收到数据
 	if (Endpoint_IsOUTReceived())
 	{
 		// If we did, and the packet has data, we'll react to it.
@@ -363,14 +361,13 @@ void HID_Task(void)
 		if (Endpoint_IsReadWriteAllowed())
 		{
 			// We'll create a place to store our data received from the host.
-			//新那家一个 JoystickOutputData 来用存放收到的数据对象
+			//新建家一个 JoystickOutputData 来用存放收到的数据对象
 			USB_JoystickReport_Output_t JoystickOutputData;
 			// We'll then take in that data, setting it up in our storage.
 			//把数据写入到对象
 			Endpoint_Read_Stream_LE(&JoystickOutputData, sizeof(JoystickOutputData), NULL);
 			// At this point, we can react to this data.
 			// However, since we're not doing anything with this data, we abandon it.
-			//还可以对数据做其它操作
 		}
 		// Regardless of whether we reacted to the data, we acknowledge an OUT packet on this endpoint.
 		//清除OUT数据
@@ -400,51 +397,9 @@ void HID_Task(void)
 	}
 }
 
-int portsval = 0;
 // Prepare the next report for the host.
 void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
 {
-
-	/* Clear the report contents */
-	memset(ReportData, 0, sizeof(USB_JoystickReport_Input_t));
-	ReportData->LX = STICK_CENTER;
-	ReportData->LY = STICK_CENTER;
-	ReportData->RX = STICK_CENTER;
-	ReportData->RY = STICK_CENTER;
-	ReportData->HAT = HAT_CENTER;
-	ReportData->Button |= SWITCH_RELEASE;
-
-	switch (target)
-	{
-	case Button:
-
-		ReportData->Button |= command;
-		break;
-	case LX:
-		ReportData->LX = command;
-		break;
-	case LY:
-		ReportData->LY = command;
-		break;
-	case RX:
-		ReportData->RX = command;
-		break;
-	case RY:
-		ReportData->RY = command;
-		break;
-	case HAT:
-		ReportData->HAT = command;
-		break;
-	case RELEASE:
-	default:
-		ReportData->LX = STICK_CENTER;
-		ReportData->LY = STICK_CENTER;
-		ReportData->RX = STICK_CENTER;
-		ReportData->RY = STICK_CENTER;
-		ReportData->HAT = HAT_CENTER;
-		ReportData->Button |= SWITCH_RELEASE;
-
-		break;
-	}
+	memcpy(ReportData, &last_report, sizeof(USB_JoystickReport_Input_t));
 }
 // vim: noexpandtab
