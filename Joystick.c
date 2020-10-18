@@ -39,10 +39,12 @@ void parseLine(char *line)
 	if (strcasecmp(t, "Button") == 0)
 	{
 		target = Button;
+		
 	}
 	else if (strcasecmp(t, "LX") == 0)
 	{
 		target = LX;
+		
 	}
 	else if (strcasecmp(t, "LY") == 0)
 	{
@@ -64,6 +66,8 @@ void parseLine(char *line)
 	{
 		target = RELEASE;
 	}
+
+
 	if (strcasecmp(c, "Y") == 0)
 	{
 		command = SWITCH_Y;
@@ -71,14 +75,18 @@ void parseLine(char *line)
 	else if (strcasecmp(c, "B") == 0)
 	{
 		command = SWITCH_B;
+		// PORTD = ~PORTD;
 	}
 	else if (strcasecmp(c, "A") == 0)
 	{
 		command = SWITCH_A;
+		// PORTB = ~PORTB;
+		
 	}
 	else if (strcasecmp(c, "X") == 0)
 	{
 		command = SWITCH_X;
+		// PORTE = ~PORTE;
 	}
 	else if (strcasecmp(c, "L") == 0)
 	{
@@ -220,6 +228,7 @@ ISR(USART1_RX_vect)
 	{
 		//判断RX输入的是什么内容
 		parseLine(b);
+		// parseLineTest(b);
 		l = 0;
 		memset(b, 0, sizeof(b));
 	}
@@ -228,6 +237,65 @@ ISR(USART1_RX_vect)
 		b[l++] = c;
 	}
 }
+
+void parseLineTest(char *line)
+{
+
+	if (strcasecmp(line, "00") == 0)
+	{
+		PORTB = 0x0;
+		
+	}
+	else if (strcasecmp(line, "0") == 0)
+	{
+		// PORTD = ~PORTD;
+		PORTB |= (1 << PB0); 
+		
+	}
+	else if (strcasecmp(line, "1") == 0)
+	{
+		// PORTD = ~PORTD;
+		PORTB |= (1 << PB1); 
+		
+	}
+	else if (strcasecmp(line, "2") == 0)
+	{
+		// PORTE = ~PORTE;
+		PORTB |= (1 << PB2); 
+		
+	}
+	else if (strcasecmp(line, "3") == 0)
+	{
+		// PORTF = ~PORTF;
+		PORTB |= (1 << PB3); 
+		
+	}
+	else if (strcasecmp(line, "4") == 0)
+	{
+		// PORTF = ~PORTF;
+		PORTB |= (1 << PB4); 
+		
+	}
+	else if (strcasecmp(line, "5") == 0)
+	{
+		// PORTF = ~PORTF;
+		PORTB |= (1 << PB5); 
+		
+	}
+	else if (strcasecmp(line, "6") == 0)
+	{
+		// PORTF = ~PORTF;
+		PORTB |= (1 << PB6); 
+		
+	}
+	else if (strcasecmp(line, "7") == 0)
+	{
+		// PORTF = ~PORTF;
+		PORTB |= (1 << PB7); 
+		
+	}
+}
+
 
 // Main entry point.
 int main(void)
@@ -273,7 +341,14 @@ void SetupHardware(void)
 	// We need to disable clock division before initializing the USB hardware.
 	clock_prescale_set(clock_div_1);
 	// We can then initialize our hardware and peripherals, including the USB stack.
-
+	DDRB = 0xFF;	//Teensy uses PORTD
+	PORTB = 0x00;
+	DDRD = 0xFF;	//Teensy uses PORTD
+	PORTD = 0x00;
+	DDRE = 0xFF;
+	PORTE = 0x00;
+	DDRF = 0xFF;
+	PORTF = 0x00;
 	// The USB stack should be initialized last.
 	USB_Init();
 }
@@ -401,5 +476,6 @@ void HID_Task(void)
 void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
 {
 	memcpy(ReportData, &last_report, sizeof(USB_JoystickReport_Input_t));
+	
 }
 // vim: noexpandtab
